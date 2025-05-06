@@ -1,17 +1,22 @@
-
-name: Java CI/CD Pipleine
+name: Java CI/CD Pipeline
 
 on: 
   push:
     branches: [main]
-
+    
 jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
-    - name: print something
-      run: echo "Hello Rishav!"
+    - name: checkout code
+      uses: actions/checkout@v4.2.2
+    - name: set up java jdk 
+      uses: actions/setup-java@v4.7.1
+      with:
+         distribution: 'temurin'
+         java-version: '17'
+    - name: compile code
+      run: mvn clean compile
+    - name: Unit tests
+      run: mvn test
     
-
-
-
