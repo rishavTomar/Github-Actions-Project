@@ -1,0 +1,17 @@
+
+name: Java CI/CD Pipleine
+
+on: 
+  push:
+    branches: [main]
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+    - name: print something
+      uses: echo "Hello Rishav!"
+    
+
+
+
