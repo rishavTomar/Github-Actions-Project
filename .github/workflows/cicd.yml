@@ -45,4 +45,9 @@ jobs:
     - name: Run trivy
       run: trivy fs . --format json --output trivy-report.json
 
+    - name: install Gitleaks
+      uses: gitleaks/gitleaks-action@v2.3.4
+      with:
+        args: --source . --report-path gitleaks-report.json --report-format json
+  
       
