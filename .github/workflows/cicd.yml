@@ -42,9 +42,14 @@ jobs:
     - name: Run trivy
       run: trivy fs . --format json --output trivy-report.json
 
-    - name: install Gitleaks
-      uses: gitleaks/gitleaks-action@v2.3.4
-      with:
-        args: --source . --report-path gitleaks-report.json --report-format json
+    - name: Install Gitleaks
+      run: |
+         curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_$(uname -s)_x64.tar.gz | tar -xz
+         sudo mv gitleaks /usr/local/bin
+
+    - name: Run Gitleaks
+      run: |
+        gitleaks detect --source . --report-format json --report-path gitleaks-report.json --exit-code 1
+
   
       
