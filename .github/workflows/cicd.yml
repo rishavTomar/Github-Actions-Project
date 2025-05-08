@@ -117,6 +117,7 @@ jobs:
       
   azure-acr-connection:
     runs-on: self-hosted
+    needs: build
     steps:
       # Checkout the repo
       - name: 'Checkout Repository'
