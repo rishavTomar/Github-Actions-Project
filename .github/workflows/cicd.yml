@@ -87,6 +87,12 @@ jobs:
     steps:
     - name: code checkout
       uses: actions/checkout@v4.2.2
+    - name: set up Java JDK
+      uses:  actions/setup-java@v4.7.1
+      with: 
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
     - name: Run unit tests
       run: mvn clean test
 
@@ -96,6 +102,12 @@ jobs:
     steps:
     - name: code checkout
       uses: actions/checkout@v4.2.2
+    - name: set up Java JDK
+      uses:  actions/setup-java@v4.7.1
+      with: 
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
     - name: build package
       run: mvn clean package
       
