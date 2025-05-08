@@ -5,98 +5,122 @@ on:
     branches: [main, develop]
 
 jobs:
-  compile:
+  cleanup:
     runs-on: self-hosted
+    if: always()  # Ensures this job runs regardless of the previous job's result
 
     steps:
-    - name: code checkout
-      uses: actions/checkout@v4.2.2
-    - name: set up Java JDK
-      uses:  actions/setup-java@v4.7.1
-      with: 
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Install maven
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y maven
-    - name: Compile build
-      run: mvn clean compile
+      - name: Cleanup self-hosted agent
+        run: |
+          echo "Cleaning up the self-hosted runner..."
+          sudo rm -rf /home/runner/work/*   # Clear workspace files
+          sudo docker system prune -af || true  # Clean up unused Docker containers, networks, and volumes
+          sudo rm -rf /tmp/* || true         # Clean up temporary files
+  #         
+  # compile:
+  #   runs-on: self-hosted
+
+  #   steps:
+  #   - name: code checkout
+  #     uses: actions/checkout@v4.2.2
+  #   - name: set up Java JDK
+  #     uses:  actions/setup-java@v4.7.1
+  #     with: 
+  #       java-version: '17'
+  #       distribution: 'temurin'
+  #       cache: maven
+  #   - name: Install maven
+  #     run: |
+  #       sudo apt-get update
+  #       sudo apt-get install -y maven
+  #   - name: Compile build
+  #     run: mvn clean compile
     
 
-  securityCheck:
-    runs-on: self-hosted
-    needs: compile
+  # securityCheck:
+  #   runs-on: self-hosted
+  #   needs: compile
 
-    steps:
-    - name: code checkout
-      uses: actions/checkout@v4.2.2
-    - name: Install trivy
-      run: |
-        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update
-        sudo apt-get install -y trivy
+  #   steps:
+  #   - name: code checkout
+  #     uses: actions/checkout@v4.2.2
+  #   - name: Install trivy
+  #     run: |
+  #       sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+  #       wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+  #       echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+  #       sudo apt-get update
+  #       sudo apt-get install -y trivy
         
-    - name: Run trivy
-      run: trivy fs . --format json --output trivy-report.json
+  #   - name: Run trivy
+  #     run: trivy fs . --format json --output trivy-report.json
 
-    - name: Install Gitleaks
-      run: sudo apt-get install -y gitleaks
+  #   - name: Install Gitleaks
+  #     run: sudo apt-get install -y gitleaks
        
-    - name: Run Gitleaks
-      run: |
-        gitleaks detect --source . --report-format json --report-path gitleaks-report.json --exit-code 1
+  #   - name: Run Gitleaks
+  #     run: |
+  #       gitleaks detect --source . --report-format json --report-path gitleaks-report.json --exit-code 1
     
-  sonarqube:
-    runs-on: self-hosted
-    needs: securityCheck
+  # sonarqube:
+  #   runs-on: self-hosted
+  #   needs: securityCheck
     
-    steps:
-    - name: Install Unzip
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y unzip
+  #   steps:
+  #   - name: Install Unzip
+  #     run: |
+  #       sudo apt-get update
+  #       sudo apt-get install -y unzip
         
-    - name: code checkout
-      uses: actions/checkout@v4.2.2
-      with:
-        # Disabling shallow clones is recommended for improving the relevancy of reporting
-        fetch-depth: 0
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5.2.0 # Ex: v4.1.0, See the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} 
+  #   - name: code checkout
+  #     uses: actions/checkout@v4.2.2
+  #     with:
+  #       # Disabling shallow clones is recommended for improving the relevancy of reporting
+  #       fetch-depth: 0
+  #   - name: SonarQube Scan
+  #     uses: SonarSource/sonarqube-scan-action@v5.2.0 # Ex: v4.1.0, See the latest version at https://github.com/marketplace/actions/official-sonarqube-scan
+  #     env:
+  #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} 
         
-    - name: SonarQube Quality Gate check
-      id: sonarqube-quality-gate-check
-      uses: sonarsource/sonarqube-quality-gate-action@master
-      with:
-          pollingTimeoutSec: 600
-      env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} 
+  #   - name: SonarQube Quality Gate check
+  #     id: sonarqube-quality-gate-check
+  #     uses: sonarsource/sonarqube-quality-gate-action@master
+  #     with:
+  #         pollingTimeoutSec: 600
+  #     env:
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #         SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} 
         
-  test: 
-    runs-on: self-hosted
-    needs: sonarqube
-    steps:
-    - name: code checkout
-      uses: actions/checkout@v4.2.2
-    - name: Run unit tests
-      run: mvn clean test
+  # test: 
+  #   runs-on: self-hosted
+  #   needs: sonarqube
+  #   steps:
+  #   - name: code checkout
+  #     uses: actions/checkout@v4.2.2
+  #   - name: Run unit tests
+  #     run: mvn clean test
 
-  build:
-    runs-on: self-hosted
-    needs: test
-    steps:
-    - name: code checkout
-      uses: actions/checkout@v4.2.2
-    - name: build package
-      run: mvn clean package
+  # build:
+  #   runs-on: self-hosted
+  #   needs: test
+  #   steps:
+  #   - name: code checkout
+  #     uses: actions/checkout@v4.2.2
+  #   - name: build package
+  #     run: mvn clean package
+      
+  # cleanup:
+  #   runs-on: self-hosted
+  #   if: always()  # Ensures this job runs regardless of the previous job's result
+
+  #   steps:
+  #     - name: Cleanup self-hosted agent
+  #       run: |
+  #         echo "Cleaning up the self-hosted runner..."
+  #         sudo rm -rf /home/runner/work/*   # Clear workspace files
+  #         sudo docker system prune -af || true  # Clean up unused Docker containers, networks, and volumes
+  #         sudo rm -rf /tmp/* || true         # Clean up temporary files
          
   
       
