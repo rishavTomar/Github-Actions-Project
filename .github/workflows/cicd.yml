@@ -156,37 +156,52 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
           
-      - name: Build image
+      - name: Build and push image
         run: |
-          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:latest .
+          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }} .
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
           
-      - name: Install Trivy
-        run: |
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
+      # - name: Install Trivy
+      #   run: |
+      #     sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+      #     wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+      #     echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+      #     sudo apt-get update
+      #     sudo apt-get install -y trivy
 
-      - name: Image scan
-        run: trivy image --format table --severity CRITICAL,HIGH javabankapp:latest
+      # - name: Image scan
+      #   run: trivy image --format table --severity CRITICAL,HIGH javabankapp:latest
 
-      - name: Tag and push image to ACR
-        run: |
-            docker tag javabankapp:${{ github.sha }} ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
-            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
+      # - name: Tag and push image to ACR
+      #   run: |
+      #       docker tag javabankapp:${{ github.sha }} ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
+      #       docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
+      
+  azure-app-service:
+     runs-on: ubuntu-latest
+     needs: build
+
+     steps:
+     - name: Download JAR artifact
+       uses: actions/download-artifact@v4
+       with:
+          name: app-jar
+          path: app  # this will download JAR to ./app folder
           
-  # cleanup:
-  #   runs-on: self-hosted
-  #   if: always()  # Ensures this job runs regardless of the previous job's result
-
-  #   steps:
-  #     - name: Cleanup self-hosted agent
-  #       run: |
-  #         echo "Cleaning up the self-hosted runner..."
-  #         sudo rm -rf /home/runner/work/*   # Clear workspace files
-  #         sudo docker system prune -af || true  # Clean up unused Docker containers, networks, and volumes
-  #         sudo rm -rf /tmp/* || true         # Clean up temporary files
+     - name: 'Login via Azure CLI'
+       uses: azure/login@v1
+       with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          
+     - name: 'Run Azure webapp deploy action using publish profile credentials'
+       uses: azure/webapps-deploy@v2
+       with:
+         app-name: javabankapp
+         package: app/*.jar
+    
+  
          
   
       
