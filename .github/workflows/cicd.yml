@@ -3,13 +3,12 @@ name: Java CI/CD Pipeline
 on:
   push:
     branches: [main]
+    
 permissions:
   id-token: write
   contents: read
   
-jobs:
-
-          
+jobs:      
   compile:
     runs-on: self-hosted
 
@@ -155,11 +154,25 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
           
-      - name: Build and push Docker image
+      - name: Build image
         run: |
           docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }} .
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
+          
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
 
+      - name: Image scan
+        run: trivy image --format table severity CRITICAL, HIGH javabankapp:${{ github.sha }}
+
+      - name: Tag and push image to ACR
+        run: |
+            docker tag javabankapp:${{ github.sha }} ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
+            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/javabankapp:${{ github.sha }}
           
   # cleanup:
   #   runs-on: self-hosted
